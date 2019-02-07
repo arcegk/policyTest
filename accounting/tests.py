@@ -59,7 +59,7 @@ class TestBillingSchedules(unittest.TestCase):
         self.assertFalse(self.policy.invoices)
         pa = PolicyAccounting(self.policy.id)
         self.assertEquals(len(self.policy.invoices), 12)
-        self.assertEquals(self.policy.invoices[0].amount_due, self.policy.annual_premium / 12)
+        self.assertEquals(self.policy.invoices[0].amount_due, 100)
 
 
 class TestReturnAccountBalance(unittest.TestCase):

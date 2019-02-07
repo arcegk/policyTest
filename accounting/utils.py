@@ -23,6 +23,12 @@ class PolicyAccounting(object):
             self.make_invoices()
 
     def return_account_balance(self, date_cursor=None):
+        """
+        Calculates and returns the balance at a given date
+
+        :param date_cursor: datetime.date instance
+        :return: int - calculated balance
+        """
         if not date_cursor:
             date_cursor = datetime.now().date()
 
@@ -43,6 +49,14 @@ class PolicyAccounting(object):
         return due_now
 
     def make_payment(self, contact_id=None, date_cursor=None, amount=0):
+        """
+        Creates a payment for a given contact
+
+        :param contact_id: int representing a Contact primary key
+        :param date_cursor: datetime.date instance - transaction dat
+        :param amount: int - amount of the payment made
+        :return: Payment instance
+        """
         if not date_cursor:
             date_cursor = datetime.now().date()
 
@@ -89,20 +103,30 @@ class PolicyAccounting(object):
             print "THIS POLICY SHOULD NOT CANCEL"
 
     def create_invoice(self, first_invoice, billing_schedules, period):
+        """
+        :param first_invoice: Invoice instance
+        :param billing_schedules: dict with the schedules available
+        :param period: int with the number of periods (number of invoices)
+        :return: list with Invoice instances
+        """
         invoices = []
         first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
         for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
             months_after_eff_date = i*period
             bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
+            amount = self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule)
             invoice = Invoice(self.policy.id,
                                 bill_date,
-                                bill_date + relativedelta(months=1),
-                                bill_date + relativedelta(months=1, days=14),
-                                self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule))
+                                bill_date + relativedelta(months=1), #due date
+                                bill_date + relativedelta(months=1, days=14), #cancel date
+                                amount)
             invoices.append(invoice)
         return invoices
 
     def make_invoices(self):
+        """
+        Create invoices for new Policy's instances
+        """
         for invoice in self.policy.invoices:
             invoice.delete()
 
