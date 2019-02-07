@@ -27,7 +27,7 @@ class PolicyAccounting(object):
             date_cursor = datetime.now().date()
 
         invoices = Invoice.query.filter_by(policy_id=self.policy.id)\
-                                .filter(Invoice.bill_date < date_cursor)\
+                                .filter(Invoice.bill_date <= date_cursor)\
                                 .order_by(Invoice.bill_date)\
                                 .all()
         due_now = 0
@@ -35,7 +35,7 @@ class PolicyAccounting(object):
             due_now += invoice.amount_due
 
         payments = Payment.query.filter_by(policy_id=self.policy.id)\
-                                .filter(Payment.transaction_date < date_cursor)\
+                                .filter(Payment.transaction_date <= date_cursor)\
                                 .all()
         for payment in payments:
             due_now -= payment.amount_paid
@@ -106,7 +106,7 @@ class PolicyAccounting(object):
         for invoice in self.policy.invoices:
             invoice.delete()
 
-        billing_schedules = {'Annual': None, 'Semi-Annual': 3, 'Quarterly': 4, 'Monthly': 12}
+        billing_schedules = {'Annual': 1, 'Semi-Annual': 3, 'Quarterly': 4, 'Monthly': 12}
 
         invoices = []
         first_invoice = Invoice(self.policy.id,
@@ -117,13 +117,13 @@ class PolicyAccounting(object):
         invoices.append(first_invoice)
 
         if self.policy.billing_schedule == "Annual":
-            pass
+            invoices += self.create_invoice(first_invoice, billing_schedules, 12)
         elif self.policy.billing_schedule == "Two-Pay":
-            invoices + self.create_invoice(first_invoice, billing_schedules, 6)
+            invoices += self.create_invoice(first_invoice, billing_schedules, 6)
         elif self.policy.billing_schedule == "Quarterly":
-            invoices + self.create_invoice(first_invoice, billing_schedules, 3)
+            invoices += self.create_invoice(first_invoice, billing_schedules, 3)
         elif self.policy.billing_schedule == "Monthly":
-            invoices + self.create_invoice(first_invoice, billing_schedules, 1)
+            invoices += self.create_invoice(first_invoice, billing_schedules, 1)
         else:
             print "You have chosen a bad billing schedule."
 
