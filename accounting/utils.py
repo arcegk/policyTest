@@ -190,6 +190,7 @@ def insert_data():
     p1 = Policy('Policy One', date(2015, 1, 1), 365)
     p1.billing_schedule = 'Annual'
     p1.agent = bob_smith.id
+    p1.named_insured = john_doe_insured.id
     policies.append(p1)
 
     p2 = Policy('Policy Two', date(2015, 2, 1), 1600)
