@@ -88,6 +88,19 @@ class PolicyAccounting(object):
         else:
             print "THIS POLICY SHOULD NOT CANCEL"
 
+    def create_invoice(self, first_invoice, billing_schedules, period):
+        invoices = []
+        first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
+        for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
+            months_after_eff_date = i*period
+            bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
+            invoice = Invoice(self.policy.id,
+                                bill_date,
+                                bill_date + relativedelta(months=1),
+                                bill_date + relativedelta(months=1, days=14),
+                                self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule))
+            invoices.append(invoice)
+        return invoices
 
     def make_invoices(self):
         for invoice in self.policy.invoices:
@@ -106,29 +119,11 @@ class PolicyAccounting(object):
         if self.policy.billing_schedule == "Annual":
             pass
         elif self.policy.billing_schedule == "Two-Pay":
-            first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
-            for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
-                months_after_eff_date = i*6
-                bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
-                invoice = Invoice(self.policy.id,
-                                  bill_date,
-                                  bill_date + relativedelta(months=1),
-                                  bill_date + relativedelta(months=1, days=14),
-                                  self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule))
-                invoices.append(invoice)
+            invoices + self.create_invoice(first_invoice, billing_schedules, 6)
         elif self.policy.billing_schedule == "Quarterly":
-            first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
-            for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
-                months_after_eff_date = i*3
-                bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
-                invoice = Invoice(self.policy.id,
-                                  bill_date,
-                                  bill_date + relativedelta(months=1),
-                                  bill_date + relativedelta(months=1, days=14),
-                                  self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule))
-                invoices.append(invoice)
+            invoices + self.create_invoice(first_invoice, billing_schedules, 3)
         elif self.policy.billing_schedule == "Monthly":
-            pass
+            invoices + self.create_invoice(first_invoice, billing_schedules, 1)
         else:
             print "You have chosen a bad billing schedule."
 
@@ -194,4 +189,3 @@ def insert_data():
     payment_for_p2 = Payment(p2.id, anna_white.id, 400, date(2015, 2, 1))
     db.session.add(payment_for_p2)
     db.session.commit()
-
