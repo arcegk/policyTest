@@ -16,6 +16,9 @@ class PolicyAccounting(object):
     """
      Each policy has its own instance of accounting.
     """
+    billing_schedules = {'Annual': 1, 'Semi-Annual': 3, 'Quarterly': 4, 'Monthly': 12,
+                         'Two-Pay': 2}
+
     def __init__(self, policy_id):
         self.policy = Policy.query.filter_by(id=policy_id).one()
 
@@ -34,6 +37,7 @@ class PolicyAccounting(object):
 
         invoices = Invoice.query.filter_by(policy_id=self.policy.id)\
                                 .filter(Invoice.bill_date <= date_cursor)\
+                                .filter(Invoice.deleted.is_(False))\
                                 .order_by(Invoice.bill_date)\
                                 .all()
         due_now = 0
@@ -123,7 +127,7 @@ class PolicyAccounting(object):
         else:
             print "THIS POLICY SHOULD NOT CANCEL"
 
-    def create_invoice(self, first_invoice, billing_schedules, period):
+    def create_invoice(self, first_invoice, period):
         """
         :param first_invoice: Invoice instance
         :param billing_schedules: dict with the schedules available
@@ -131,11 +135,11 @@ class PolicyAccounting(object):
         :return: list with Invoice instances
         """
         invoices = []
-        first_invoice.amount_due = first_invoice.amount_due / billing_schedules.get(self.policy.billing_schedule)
-        for i in range(1, billing_schedules.get(self.policy.billing_schedule)):
+        first_invoice.amount_due = first_invoice.amount_due / self.billing_schedules.get(self.policy.billing_schedule)
+        for i in range(1, self.billing_schedules.get(self.policy.billing_schedule)):
             months_after_eff_date = i*period
             bill_date = self.policy.effective_date + relativedelta(months=months_after_eff_date)
-            amount = self.policy.annual_premium / billing_schedules.get(self.policy.billing_schedule)
+            amount = self.policy.annual_premium / self.billing_schedules.get(self.policy.billing_schedule)
             invoice = Invoice(self.policy.id,
                                 bill_date,
                                 bill_date + relativedelta(months=1), #due date
@@ -151,9 +155,6 @@ class PolicyAccounting(object):
         for invoice in self.policy.invoices:
             invoice.delete()
 
-        billing_schedules = {'Annual': 1, 'Semi-Annual': 3, 'Quarterly': 4, 'Monthly': 12,
-                             'Two-Pay': 2}
-
         invoices = []
         first_invoice = Invoice(self.policy.id,
                                 self.policy.effective_date, #bill_date
@@ -163,19 +164,40 @@ class PolicyAccounting(object):
         invoices.append(first_invoice)
 
         if self.policy.billing_schedule == "Annual":
-            invoices += self.create_invoice(first_invoice, billing_schedules, 12)
+            invoices += self.create_invoice(first_invoice, 12)
         elif self.policy.billing_schedule == "Two-Pay":
-            invoices += self.create_invoice(first_invoice, billing_schedules, 6)
+            invoices += self.create_invoice(first_invoice, 6)
         elif self.policy.billing_schedule == "Quarterly":
-            invoices += self.create_invoice(first_invoice, billing_schedules, 3)
+            invoices += self.create_invoice(first_invoice, 3)
         elif self.policy.billing_schedule == "Monthly":
-            invoices += self.create_invoice(first_invoice, billing_schedules, 1)
+            invoices += self.create_invoice(first_invoice, 1)
         else:
             print "You have chosen a bad billing schedule."
 
         for invoice in invoices:
             db.session.add(invoice)
         db.session.commit()
+
+    def change_billing_schedule(self, new_schedule):
+        """
+        changes current schedule to a given one
+
+        :param new_schedule: str with the new schedule to set
+        :return:
+        """
+        if new_schedule in self.billing_schedules:
+            if self.policy.billing_schedule != new_schedule:
+                self.policy.billing_schedule = new_schedule
+                db.session.add(self.policy)
+                db.session.commit()
+                self.make_invoices()
+                return
+            else:
+                print 'Nothing to change'
+                return
+        print "You have chosen a bad billing schedule."
+
+
 
 ################################
 # The functions below are for the db and 

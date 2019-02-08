@@ -23,7 +23,7 @@ class Policy(db.Model):
         self.effective_date = effective_date
         self.annual_premium = annual_premium
 
-    invoices = db.relation('Invoice', primaryjoin="Invoice.policy_id==Policy.id")
+    invoices = db.relation('Invoice', primaryjoin="and_(Invoice.policy_id==Policy.id, Invoice.deleted==False)")
 
 
 class Contact(db.Model):
@@ -61,6 +61,11 @@ class Invoice(db.Model):
         self.due_date = due_date
         self.cancel_date = cancel_date
         self.amount_due = amount_due
+
+    def delete(self):
+        self.deleted = True
+        db.session.add(self)
+        db.session.commit()
 
 
 class Payment(db.Model):
