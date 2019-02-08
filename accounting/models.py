@@ -77,6 +77,15 @@ class Invoice(db.Model):
         db.session.add(self)
         db.session.commit()
 
+    @property
+    def serialize(self):
+        return {
+            'id': self.id,
+            'bill_date': str(self.bill_date),
+            'due_date': str(self.due_date),
+            'amount_due': self.amount_due
+        }
+
 
 class Payment(db.Model):
     __tablename__ = 'payments'
