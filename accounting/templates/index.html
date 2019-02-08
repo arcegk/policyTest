@@ -19,12 +19,12 @@
         <div class="row align-items-center justify-content-center">
             <div class="col-xs-6">
                 <div class="col-xs-12">
-                    <input type="number" data-bind="textInput: policyID" class="form-control" placeholder="Policy number">
+                    <input type="number" min="1" data-bind="textInput: policyID" class="form-control" placeholder="Policy number">
                 </div>
             </div>
             <div class="col-xs-3">
                 <div class="col-xs-12">
-                    <input data-bind="value: dateParse" class="form-control" type="date">
+                    <input data-bind="value: dateParse" id="date-inpt" class="form-control" type="date">
                 </div>
             </div>
             <div class="col-xs-3">
@@ -65,7 +65,7 @@
     let PolicyView = {
         policyID: ko.observable(""),
         dateParse: function(value) {
-            return moment(value).format("DD-MM-YYYY");
+            return moment(value).format("YYYY-MM-DD");
         },
         invoices: ko.observableArray(),
         balance: ko.observable(""),
@@ -74,20 +74,36 @@
         updateData: function(data) {
             this.invoices(data.invoices);
             this.balance(data.balance);
-            this.visible(true);
+            this.visible(data.success);
         },
 
         search: function(){
-            $.ajax({
-                url: '/get-policy/?policy=' + this.policyID() + '&date=' + this.dateParse,
-                success: function (data) {
-                    PolicyView.updateData(data);
-                }
-            });
+            let dateP = typeof this.dateParse === "function" ? this.dateParse() : this.dateParse;
+            if(this.policyID() !== ""){
+                $.ajax({
+                    url: '/get-policy/?policy=' + this.policyID() + '&date=' + dateP,
+                    success: function (data) {
+                        if(data.success) {
+                            PolicyView.updateData(data);
+                        }else{
+                            PolicyView.updateData(data);
+                            alert("Policy not found");
+                        }
+                    },
+                    fail: function (data) {
+                        alert("Policy not found");
+                    }
+                });
+            }else{
+                alert('Policy field empty');
+            }
         }
     };
 
     ko.applyBindings(PolicyView);
+
+    var today = moment().format('YYYY-MM-DD');
+    $('#date-inpt').val(today);
 </script>
 </body>
 </html>

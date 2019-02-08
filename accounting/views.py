@@ -19,8 +19,15 @@ def index():
 def get_policy():
     policy_id = request.args.get('policy', type=int)
     date = request.args.get('date')
-    policy_accounting = PolicyAccounting(policy_id)
-    response = {'balance': policy_accounting.return_account_balance(date),
-                'invoices': [x.serialize for x in policy_accounting.policy.invoices]}
+    if policy_id:
+        try:
+            policy_accounting = PolicyAccounting(policy_id)
+            response = {'balance': policy_accounting.return_account_balance(date),
+                        'invoices': [x.serialize for x in policy_accounting.policy.invoices],
+                        'success': True}
+        except Exception as e:
+            response = {'success': False, 'msg': str(e)}
+    else:
+        response = {'success': False, 'msg': 'invalid policy_id'}
 
     return jsonify(response)
