@@ -1,8 +1,6 @@
 import datetime
 from accounting import db
-# from sqlalchemy.ext.declarative import declarative_base
-# 
-# DeclarativeBase = declarative_base()
+
 
 class Policy(db.Model):
     __tablename__ = 'policies'

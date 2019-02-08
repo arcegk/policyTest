@@ -2,11 +2,9 @@
 from flask import render_template, request, jsonify
 
 # Import things from Flask that we need.
-from accounting import app, db
+from accounting import app
 from .utils import PolicyAccounting
 
-# Import our models
-from models import Contact, Invoice, Policy
 
 # Routing for the server.
 @app.route("/")

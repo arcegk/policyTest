@@ -12,6 +12,7 @@ This is the base code for the engineer project.
 #######################################################
 """
 
+
 class PolicyAccounting(object):
     """
      Each policy has its own instance of accounting.
@@ -110,6 +111,9 @@ class PolicyAccounting(object):
         return False
 
     def evaluate_cancel(self, date_cursor=None):
+        """
+        Checks if a policy should cancelled
+        """
         if not date_cursor:
             date_cursor = datetime.now().date()
 
@@ -220,6 +224,7 @@ def build_or_refresh_db():
     db.create_all()
     insert_data()
     print "DB Ready!"
+
 
 def insert_data():
     #Contacts

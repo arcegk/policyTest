@@ -1,11 +1,13 @@
 #!/user/bin/env python2.7
 
 import unittest
-from datetime import date, datetime
-from dateutil.relativedelta import relativedelta
+from datetime import date
+import json
 
-from accounting import db
-from models import Contact, Invoice, Payment, Policy
+from flask import Flask
+
+from accounting import db, views
+from models import Contact, Invoice, Policy
 from utils import PolicyAccounting
 
 """
@@ -14,8 +16,8 @@ Test Suite for Accounting
 #######################################################
 """
 
-class TestBillingSchedules(unittest.TestCase):
 
+class BaseTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.test_agent = Contact('Test Agent', 'Agent')
@@ -37,8 +39,8 @@ class TestBillingSchedules(unittest.TestCase):
         db.session.delete(cls.policy)
         db.session.commit()
 
-    def setUp(self):
-        pass
+
+class TestBillingSchedules(BaseTest):
 
     def tearDown(self):
         for invoice in self.policy.invoices:
@@ -62,28 +64,7 @@ class TestBillingSchedules(unittest.TestCase):
         self.assertEquals(self.policy.invoices[0].amount_due, 100)
 
 
-class TestReturnAccountBalance(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.test_agent = Contact('Test Agent', 'Agent')
-        cls.test_insured = Contact('Test Insured', 'Named Insured')
-        db.session.add(cls.test_agent)
-        db.session.add(cls.test_insured)
-        db.session.commit()
-
-        cls.policy = Policy('Test Policy', date(2015, 1, 1), 1200)
-        cls.policy.named_insured = cls.test_insured.id
-        cls.policy.agent = cls.test_agent.id
-        db.session.add(cls.policy)
-        db.session.commit()
-
-    @classmethod
-    def tearDownClass(cls):
-        db.session.delete(cls.test_insured)
-        db.session.delete(cls.test_agent)
-        db.session.delete(cls.policy)
-        db.session.commit()
+class TestReturnAccountBalance(BaseTest):
 
     def setUp(self):
         self.payments = []
@@ -122,31 +103,7 @@ class TestReturnAccountBalance(unittest.TestCase):
         self.assertEquals(pa.return_account_balance(date_cursor=invoices[1].bill_date), 0)
 
 
-class TestPolicyCancel(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        cls.test_agent = Contact('Test Agent', 'Agent')
-        cls.test_insured = Contact('Test Insured', 'Named Insured')
-        db.session.add(cls.test_agent)
-        db.session.add(cls.test_insured)
-        db.session.commit()
-
-        cls.policy = Policy('Test Policy', date(2015, 1, 1), 1200)
-        db.session.add(cls.policy)
-        cls.policy.named_insured = cls.test_insured.id
-        cls.policy.agent = cls.test_agent.id
-        db.session.commit()
-
-    @classmethod
-    def tearDownClass(cls):
-        db.session.delete(cls.test_insured)
-        db.session.delete(cls.test_agent)
-        db.session.delete(cls.policy)
-        db.session.commit()
-
-    def setUp(self):
-        pass
+class TestPolicyCancel(BaseTest):
 
     def tearDown(self):
         for invoice in self.policy.invoices:
@@ -157,3 +114,71 @@ class TestPolicyCancel(unittest.TestCase):
         pa = PolicyAccounting(self.policy.id)
         pa.make_cancelation()
         self.assertEquals(self.policy.status, 'Canceled')
+
+
+class TestPolicyView(unittest.TestCase):
+    s_app = Flask(__name__)
+
+    @staticmethod
+    @s_app.route("/get-policy/")
+    def get_mek_policy():
+        return views.get_policy()
+
+    @classmethod
+    def setUpClass(cls):
+        with cls.s_app.app_context():
+            cls.test_agent = Contact('Test Agent', 'Agent')
+            cls.test_insured = Contact('Test Insured', 'Named Insured')
+            db.session.add(cls.test_agent)
+            db.session.add(cls.test_insured)
+            db.session.commit()
+
+            cls.policy = Policy('Test Policy', date(2015, 1, 1), 1200)
+            db.session.add(cls.policy)
+            cls.policy.named_insured = cls.test_insured.id
+            cls.policy.agent = cls.test_agent.id
+            db.session.commit()
+
+    @classmethod
+    def tearDownClass(cls):
+        with cls.s_app.app_context():
+            db.session.delete(cls.test_insured)
+            db.session.delete(cls.test_agent)
+            db.session.delete(cls.policy)
+            db.session.commit()
+
+    def tearDown(self):
+        with self.s_app.app_context():
+            for invoice in self.policy.invoices:
+                db.session.delete(invoice)
+            db.session.commit()
+
+    def test_invalid_request(self):
+        with self.s_app.app_context():
+            pa = PolicyAccounting(self.policy.id)
+            print self.policy.id
+            with self.s_app.test_client() as c:
+                data = c.get("/get-policy/").data
+                print data
+            data = json.loads(data)
+            self.assertEquals(data['success'], False)
+
+    def test_valid_request(self):
+        with self.s_app.app_context():
+            pa = PolicyAccounting(self.policy.id)
+            with self.s_app.test_client() as c:
+                data = c.get("/get-policy/?policy={}".format(self.policy.id)).data
+                print data
+            data = json.loads(data)
+            self.assertEquals(data['success'], True)
+            self.assertEquals(data['balance'], 1200)
+
+    def test_invalid_number_request(self):
+        with self.s_app.app_context():
+            pa = PolicyAccounting(self.policy.id)
+            print self.policy.id
+            with self.s_app.test_client() as c:
+                data = c.get("/get-policy/?policy=abc").data
+                print data
+            data = json.loads(data)
+            self.assertEquals(data['success'], False)
