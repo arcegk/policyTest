@@ -122,10 +122,9 @@ class PolicyAccounting(object):
             if not self.return_account_balance(invoice.cancel_date):
                 continue
             else:
-                print "THIS POLICY SHOULD HAVE CANCELED"
-                break
+                return True
         else:
-            print "THIS POLICY SHOULD NOT CANCEL"
+            return False
 
     def create_invoice(self, first_invoice, period):
         """
@@ -197,7 +196,20 @@ class PolicyAccounting(object):
                 return
         print "You have chosen a bad billing schedule."
 
+    def make_cancelation(self, description=None, date_cursor=None, cancelation_date=None):
+        """
+        Cancels a policy if possible
 
+        :param description: str
+        :param date_cursor: datetime.date
+        :param cancelation_date: datetime.date
+        :return:
+        """
+        if self.evaluate_cancel(date_cursor):
+            self.policy.cancel(description, cancelation_date)
+            print "Policy cancelled"
+        else:
+            print "Policy can't be cancelled"
 
 ################################
 # The functions below are for the db and 

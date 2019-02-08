@@ -1,3 +1,4 @@
+import datetime
 from accounting import db
 # from sqlalchemy.ext.declarative import declarative_base
 # 
@@ -24,6 +25,15 @@ class Policy(db.Model):
         self.annual_premium = annual_premium
 
     invoices = db.relation('Invoice', primaryjoin="and_(Invoice.policy_id==Policy.id, Invoice.deleted==False)")
+
+    def cancel(self, description=None, cancelation_date=None):
+        if not description:
+            description = ''
+        self.status = u'Canceled'
+        cancelation = Cancelation(self.id, description, cancelation_date)
+        db.session.add(self)
+        db.session.add(cancelation)
+        db.session.commit()
 
 
 class Contact(db.Model):
@@ -85,3 +95,21 @@ class Payment(db.Model):
         self.contact_id = contact_id
         self.amount_paid = amount_paid
         self.transaction_date = transaction_date
+
+
+class Cancelation(db.Model):
+    __tablename__ = 'cancelations'
+
+    __table_args__ = {}
+
+    id = db.Column(u'id', db.INTEGER(), primary_key=True, nullable=False)
+    policy_id = db.Column(u'policy_id', db.INTEGER(), db.ForeignKey('policies.id'), nullable=False)
+    description = db.Column(u'description', db.TEXT(), default='', nullable=False)
+    cancelation_date = db.Column(u'cancelation_date', db.DATE(), nullable=False)
+
+    def __init__(self, policy_id, description, cancelation_date=None):
+        if not cancelation_date:
+            cancelation_date = datetime.datetime.now().date()
+        self.cancelation_date = cancelation_date
+        self.policy_id = policy_id
+        self.description = description
